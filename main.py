@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Write the Monday 23 November 2026 world-news front-page image to /output/entry.png.
 
-The asset is a 1024x1024 PNG summarizing 50 verified stories from Monday 23 November 2026
+The asset is a 1024x1024 PNG summarizing 50 stories from Monday 23 November 2026
 across 7 regions (Europe, Americas, Asia, Africa, Middle East, Oceania, Global), with
-13 custom vector-illustrated cards, a UTC timeline, regional breadth bar, world map,
-37 numbered briefs, and a strict Date Check audit box.
+13 illustrated cards, UTC timeline, world map, markets close, and 37 briefs.
 """
 
 import os

@@ -1,8 +1,17 @@
 {
   "date_title": "Monday 23 November 2026",
-  "eyebrow_left": "ONE DAY OF WORLD NEWS, ONE PICTURE",
-  "eyebrow_right": "50 VERIFIED STORIES · 7 REGIONS · 15 FIELDS · ALL DATED MONDAY 23 NOV 2026",
+  "eyebrow_left": "THE WORLD IN ONE DAY",
+  "eyebrow_right": "50 STORIES · 7 REGIONS · WORLD EDITION",
   "subdeck": "Nvidia surges 31.3% on Jensen Huang's return · Ukraine hits Perm refinery & Libya corvette · Drones strike Khartoum UN compound",
+  "markets_close": [
+    {"name": "Nvidia (NVDA)", "val": "$164.88", "chg": "+31.3%", "up": true},
+    {"name": "S&P 500", "val": "7,237.17", "chg": "+4.73%", "up": true},
+    {"name": "Nasdaq Comp.", "val": "Tech rally", "chg": "+6.5%", "up": true},
+    {"name": "South Korea Kospi", "val": "Intraday -5.8%", "chg": "-3.3%", "up": false},
+    {"name": "Bitcoin (BTC)", "val": "~$62,000", "chg": "Rebound", "up": true},
+    {"name": "Spot Gold", "val": "$3,615/oz", "chg": "+2.0%", "up": true},
+    {"name": "Brent Crude", "val": "$88–91/bbl", "chg": "Lower", "up": false}
+  ],
   "utc_timeline": [
     {"time": "00:30", "label": "Taiwan short-sell ban starts"},
     {"time": "03:30", "label": "NZ draws 1st Test vs India"},
@@ -208,12 +217,12 @@
     {"id": 28, "region": "AF", "place": "Abuja, Nigeria", "text": "President Tinubu urges parliament to decriminalise attempted suicide.", "src": "AllAfrica", "lat": 9.1, "lon": 7.5},
     {"id": 29, "region": "AF", "place": "Libya", "text": "Sharara oil pipeline reopens, easing crude; east Libya seizes 4M+ drug pills.", "src": "Africa Ctr", "lat": 26.5, "lon": 12.2},
     {"id": 30, "region": "AF", "place": "Rabat, Morocco", "text": "Palace unveils 4bn-dirham plan to make 40% of defence gear locally by 2035.", "src": "Africa Ctr", "lat": 34.0, "lon": -6.8},
-    {"id": 31, "region": "AF", "place": "Addis Ababa", "text": "5th Africa Public Health Conference opens; German Pres. begins Abidjan tour.", "src": "Dawan", "lat": 9.0, "lon": 38.7},
-    {"id": 32, "region": "AF", "place": "Durban / Africa", "text": "CREA cites $21.6bn oil windfall for 9 African exporters; Durban hosts water talks.", "src": "CREA, SAnews", "lat": -29.9, "lon": 31.0},
+    {"id": 31, "region": "AF", "place": "Addis Ababa", "text": "5th Africa Public Health Conference opens; German president begins Africa tour in Abidjan.", "src": "Dawan", "lat": 9.0, "lon": 38.7},
+    {"id": 32, "region": "AF", "place": "Durban / Africa", "text": "Nine African oil exporters gain $21.6bn windfall; Durban hosts AWSISA water talks.", "src": "CREA, SAnews", "lat": -29.9, "lon": 31.0},
     {"id": 33, "region": "AS", "place": "New Delhi", "text": "Lowy 2026 Asia Power Index keeps India #3, tightest China gap since 2018.", "src": "Lowy Inst", "lat": 28.6, "lon": 77.2},
     {"id": 34, "region": "AS", "place": "India", "text": "Government weighs up to 30% non-Basmati rice export duty from Dec on inflation.", "src": "UkrAgro", "lat": 20.6, "lon": 79.0},
     {"id": 35, "region": "AS", "place": "Beijing", "text": "Reports say China's 4th, nuclear-powered aircraft carrier nears completion.", "src": "DefenseNews", "lat": 39.9, "lon": 116.4},
-    {"id": 36, "region": "AS", "place": "Dhaka", "text": "Police fire tear gas at garment wage protesters; ADB adds 5 solar projects.", "src": "AJ, RN", "lat": 23.8, "lon": 90.4},
+    {"id": 36, "region": "AS", "place": "Dhaka", "text": "Police fire tear gas and stun grenades at garment workers protesting minimum wage.", "src": "Al Jazeera", "lat": 23.8, "lon": 90.4},
     {"id": 37, "region": "AS", "place": "Hong Kong", "text": "Authorities restrict memorials before 1st anniversary of Tai Po fire (168 dead).", "src": "AsiaNews", "lat": 22.3, "lon": 114.2},
     {"id": 38, "region": "AS", "place": "Istanbul", "text": "Archaeologists report centuries-old hidden tunnel network under Hagia Sophia.", "src": "CNN", "lat": 41.0, "lon": 29.0},
 
@@ -229,7 +238,5 @@
     {"id": 48, "region": "OC", "place": "Melbourne", "text": "Music legend & Countdown host Ian 'Molly' Meldrum dies aged 83; state funeral set.", "src": "Guardian", "lat": -37.8, "lon": 145.0},
     {"id": 49, "region": "OC", "place": "Sydney / NZ", "text": "Australia flash services PMI falls to 46.2 (5-yr low); NZ joins NATO air pact.", "src": "S&P, NATO", "lat": -33.9, "lon": 151.2},
     {"id": 50, "region": "GL", "place": "World Markets", "text": "Bitcoin rebounds near $62k & gold tops $3,615/oz while Brent eases to $88–91.", "src": "Schwab, XTB", "lat": 40.7, "lon": -74.0}
-  ],
-  "date_check_left_out": "Left out on purpose (earlier days, UTC) — Sun 22 Nov: COP31 final collapse/no-deal text, Las Vegas F1 GP (Verstappen win), ATP Finals (Alcaraz d. Zverev), Somalia expelling UAE envoy (UAE reaction shown today), Russia's 186-drone barrage, HK Election Committee vote. Sat 21 Nov: BepiColombo Mercury burn, 'El Chapo Isidro' capture, Sparta II ship fire off Finland, Paolo Bulgari's death (Rome funeral Mon 23), Bayelsa boat sinking. Fri 20 Nov: Kyiv bridge strikes, Cyclone Akvan, Peru M6.7 quake, UK-EU reset deal, ICJ Myanmar ruling.",
-  "date_check_not_yet": "Not yet (future): Tue 24 Nov World Chess Championship Game 1 (Gukesh v Sindarov, Geneva); Fri 27 Nov 2nd NZ–India Test (Christchurch)."
+  ]
 }

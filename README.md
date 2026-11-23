@@ -4,7 +4,7 @@
 [![rank](https://make.fun/badge/news-image-20261123/0xb3e689/news-image-20261123/rank.svg)](https://make.fun/bounty/news-image-20261123/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=news-image-20261123)
 [![reward](https://make.fun/badge/news-image-20261123/0xb3e689/news-image-20261123/reward.svg)](https://make.fun/bounty/news-image-20261123/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=news-image-20261123)
 
-Editorial one-page visual summary of **Monday 23 November 2026** world news: 50 date-verified stories across 7 regions (including 8 African stories), 13 custom vector-illustrated cards, UTC timeline, key numbers, real-projection world map, 37 numbered briefs, verification key, and an explicit Date Check audit.
+Editorial one-page summary of **Monday 23 November 2026** world news: 50 stories across 7 regions (including 8 from Africa), 13 illustrated cards, UTC timeline, key figures, world map, markets close, and 37 briefs.
 
 ## Run it
 

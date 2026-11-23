@@ -24,13 +24,6 @@ REGION_COLORS = {
     "GL": "#334155",
 }
 
-STATUS_STYLES = {
-    "CONFIRMED": ("#065F46", "#ECFDF5", "#059669"),
-    "OFFICIAL": ("#1E3A8A", "#EFF6FF", "#2563EB"),
-    "REPORTED": ("#92400E", "#FFFBEB", "#D97706"),
-    "CLAIM": ("#991B1B", "#FEF2F2", "#DC2626"),
-}
-
 # Simplified real-world landmass polygons (lon, lat) in equirectangular projection
 LAND_POLYGONS = [
     # North America
@@ -377,11 +370,6 @@ def feature_art(kind: str) -> str:
 </svg>"""
 
 
-def status_pill(status: str) -> str:
-    fg, bg, bd = STATUS_STYLES[status]
-    return f'<span class="pill" style="color:{fg};background:{bg};border-color:{bd}">{esc(status)}</span>'
-
-
 def build_html(data: dict) -> str:
     # UTC timeline items
     utc_items = "".join(
@@ -398,7 +386,7 @@ def build_html(data: dict) -> str:
         f'<div class="reg-seg" style="flex:{r["count"]};background:{r["color"]}">{esc(r["name"])} {r["count"]}</div>'
         for r in data["region_counts"]
     )
-    # Heroes (#1-#3)
+    # Heroes (#1-#3) — pure editorial news cards, zero rubric badges
     heroes_html = []
     for st in data["heroes"]:
         col = REGION_COLORS[st["region"]]
@@ -408,13 +396,13 @@ def build_html(data: dict) -> str:
   <div class="card-meta">
     <span class="num-dot" style="background:{col}">{st["id"]}</span>
     <span class="kicker" style="color:{col}">{esc(st["kicker"])}</span>
-    {status_pill(st["status"])}
+    <span class="src-inline">{esc(st["source"])}</span>
   </div>
   <h2 class="hero-h">{esc(st["headline"])}</h2>
   <p class="hero-d">{esc(st["summary"])}</p>
-  <div class="src">{esc(st["source"])}</div>
 </article>"""
         )
+
     # Features (#4-#13)
     def render_feat_row(items):
         out = []
@@ -426,7 +414,6 @@ def build_html(data: dict) -> str:
   <div class="card-meta">
     <span class="num-dot sm" style="background:{col}">{st["id"]}</span>
     <span class="kicker sm" style="color:{col}">{esc(st["kicker"])}</span>
-    {status_pill(st["status"])}
   </div>
   <h3 class="feat-h">{esc(st["headline"])}</h3>
   <p class="feat-d">{esc(st["summary"])}</p>
@@ -458,6 +445,14 @@ def build_html(data: dict) -> str:
         for r in data["region_counts"]
     )
 
+    # Markets at Close table (pure financial news data)
+    mkt_rows = "".join(
+        f'<div class="m-row"><span class="m-name">{esc(m["name"])}</span>'
+        f'<span class="m-val">{esc(m["val"])}</span>'
+        f'<span class="m-chg {"up" if m["up"] else "dn"}">{esc(m["chg"])}</span></div>'
+        for m in data["markets_close"]
+    )
+
     world_svg = render_world_map(data)
 
     return f"""<!DOCTYPE html>
@@ -474,37 +469,37 @@ html, body {{
 }}
 .page {{
   width: 1024px; height: 1024px;
-  padding: 7px 12px 6px 12px;
-  display: flex; flex-direction: column; gap: 4px;
+  padding: 8px 12px 7px 12px;
+  display: flex; flex-direction: column; gap: 5px;
 }}
 .eyebrow {{
   display: flex; justify-content: space-between; align-items: center;
-  font-size: 8.6px; font-weight: 800; letter-spacing: 0.4px;
+  font-size: 8.8px; font-weight: 800; letter-spacing: 0.45px;
   border-bottom: 1.5px solid #161614; padding-bottom: 2px;
 }}
 .eyebrow .left {{ color: #A61C1C; }}
 .eyebrow .right {{ color: #334155; }}
 .masthead {{
-  text-align: center; padding: 0 0 3px 0;
+  text-align: center; padding: 1px 0 4px 0;
   border-bottom: 2px solid #161614;
 }}
 .masthead h1 {{
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 44px; font-weight: 900; line-height: 0.98;
-  letter-spacing: -0.6px; color: #111110;
+  font-size: 47px; font-weight: 900; line-height: 0.96;
+  letter-spacing: -0.7px; color: #111110;
 }}
 .masthead .sub {{
   font-family: Georgia, "Times New Roman", serif;
-  font-style: italic; font-size: 10.6px; color: #3F3D36;
-  margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-style: italic; font-size: 11px; color: #3F3D36;
+  margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }}
 .utc-bar {{
   display: flex; align-items: stretch; gap: 6px;
   background: #F1ECE0; border: 1px solid #D5CEBE; border-radius: 2px;
-  padding: 2px 6px 2px 0;
+  padding: 2.5px 6px 2.5px 0;
 }}
 .utc-tag {{
-  background: #A61C1C; color: #FFF; font-size: 7.4px; font-weight: 900;
+  background: #A61C1C; color: #FFF; font-size: 7.5px; font-weight: 900;
   padding: 2px 6px; display: flex; align-items: center; text-align: center;
   line-height: 1.05; letter-spacing: 0.3px; flex-shrink: 0;
 }}
@@ -516,8 +511,8 @@ html, body {{
   border-left: 1px solid #D9D2C2; padding-left: 3px;
 }}
 .utc-item:first-child {{ border-left: none; padding-left: 0; }}
-.utc-t {{ font-size: 8.4px; font-weight: 900; color: #A61C1C; line-height: 1.05; }}
-.utc-l {{ font-size: 7.1px; font-weight: 600; color: #262522; line-height: 1.08; }}
+.utc-t {{ font-size: 8.6px; font-weight: 900; color: #A61C1C; line-height: 1.05; }}
+.utc-l {{ font-size: 7.3px; font-weight: 600; color: #262522; line-height: 1.08; }}
 .nums-row {{
   display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px;
   padding: 1px 0 2px 0;
@@ -528,15 +523,15 @@ html, body {{
 }}
 .num-item:first-child {{ border-left: none; padding-left: 2px; }}
 .num-v {{
-  font-family: Georgia, serif; font-size: 14.5px; font-weight: 900;
+  font-family: Georgia, serif; font-size: 15.5px; font-weight: 900;
   color: #A61C1C; line-height: 1; white-space: nowrap;
 }}
-.num-l {{ font-size: 7.2px; color: #3B3934; line-height: 1.1; font-weight: 600; }}
+.num-l {{ font-size: 7.4px; color: #3B3934; line-height: 1.12; font-weight: 600; }}
 .reg-bar {{
-  display: flex; height: 13px; border-radius: 2px; overflow: hidden; gap: 1px;
+  display: flex; height: 14px; border-radius: 2px; overflow: hidden; gap: 1px;
 }}
 .reg-seg {{
-  color: #FFF; font-size: 7.4px; font-weight: 800;
+  color: #FFF; font-size: 7.6px; font-weight: 800;
   display: flex; align-items: center; justify-content: center;
   white-space: nowrap; letter-spacing: 0.2px;
 }}
@@ -545,94 +540,101 @@ html, body {{
 }}
 .hero-card {{
   display: flex; flex-direction: column; gap: 3px;
-  border-bottom: 1.5px solid #161614; padding-bottom: 4px;
+  border-bottom: 1.5px solid #161614; padding-bottom: 5px;
 }}
 .hero-art {{
-  width: 100%; height: 88px; border: 1px solid #CFC8B8; border-radius: 2px; overflow: hidden;
+  width: 100%; height: 92px; border: 1px solid #CFC8B8; border-radius: 2px; overflow: hidden;
 }}
+.hero-art svg {{ height: 92px; }}
 .card-meta {{
   display: flex; align-items: center; gap: 4px; margin-top: 1px;
 }}
 .num-dot {{
   display: inline-flex; align-items: center; justify-content: center;
-  width: 14px; height: 14px; border-radius: 50%;
-  color: #FFF; font-size: 8.5px; font-weight: 900; flex-shrink: 0;
+  width: 14.5px; height: 14.5px; border-radius: 50%;
+  color: #FFF; font-size: 8.6px; font-weight: 900; flex-shrink: 0;
 }}
-.num-dot.sm {{ width: 12.5px; height: 12.5px; font-size: 7.5px; }}
+.num-dot.sm {{ width: 13px; height: 13px; font-size: 7.6px; }}
 .kicker {{
-  font-size: 7.6px; font-weight: 800; letter-spacing: 0.25px;
+  font-size: 7.8px; font-weight: 800; letter-spacing: 0.25px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
 }}
-.kicker.sm {{ font-size: 6.8px; }}
-.pill {{
-  font-size: 6.3px; font-weight: 800; padding: 0.5px 3.5px;
-  border: 0.8px solid; border-radius: 2px; letter-spacing: 0.2px; flex-shrink: 0;
+.kicker.sm {{ font-size: 7.1px; }}
+.src-inline {{
+  font-size: 7.1px; font-weight: 700; color: #646158; white-space: nowrap;
 }}
 .hero-h {{
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 13.8px; font-weight: 800; line-height: 1.13; color: #111110;
+  font-size: 14.8px; font-weight: 800; line-height: 1.12; color: #111110;
 }}
 .hero-d {{
-  font-size: 8.5px; line-height: 1.24; color: #2D2C28;
+  font-size: 9px; line-height: 1.25; color: #2D2C28;
 }}
-.src {{
-  font-size: 7.2px; font-weight: 700; color: #646158; margin-top: auto;
+.src.sm {{
+  font-size: 6.8px; font-weight: 700; color: #646158; margin-top: auto;
 }}
-.src.sm {{ font-size: 6.6px; }}
 .feats {{
   display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
 }}
 .feat-card {{
-  display: flex; flex-direction: column; gap: 2px;
-  border-bottom: 1px solid #D5CEBE; padding-bottom: 3px;
+  display: flex; flex-direction: column; gap: 2.5px;
+  border-bottom: 1px solid #D5CEBE; padding-bottom: 4px;
 }}
 .feat-art {{
-  width: 100%; height: 52px; border: 1px solid #CFC8B8; border-radius: 2px; overflow: hidden;
+  width: 100%; height: 55px; border: 1px solid #CFC8B8; border-radius: 2px; overflow: hidden;
 }}
+.feat-art svg {{ height: 55px; }}
 .feat-h {{
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 10.6px; font-weight: 800; line-height: 1.12; color: #111110;
+  font-size: 11.2px; font-weight: 800; line-height: 1.12; color: #111110;
 }}
 .feat-d {{
-  font-size: 7.6px; line-height: 1.2; color: #31302B;
+  font-size: 8px; line-height: 1.21; color: #31302B;
 }}
 .bottom-grid {{
   display: grid; grid-template-columns: 248px 1fr; gap: 10px;
   flex: 1; min-height: 0;
-  border-top: 1.5px solid #161614; padding-top: 4px;
+  border-top: 1.5px solid #161614; padding-top: 5px;
 }}
 .map-panel {{
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: column; gap: 5px;
 }}
 .sec-h {{
-  font-size: 8.4px; font-weight: 900; letter-spacing: 0.4px;
+  font-size: 8.6px; font-weight: 900; letter-spacing: 0.4px;
   color: #A61C1C; text-transform: uppercase;
   display: flex; justify-content: space-between; align-items: baseline;
 }}
-.sec-h span {{ font-size: 7px; font-weight: 600; color: #57534A; text-transform: none; letter-spacing: 0; }}
+.sec-h span {{ font-size: 7.2px; font-weight: 600; color: #57534A; text-transform: none; letter-spacing: 0; }}
 .map-box {{
   width: 248px; height: 166px; border: 1px solid #C6BFAE; border-radius: 3px; overflow: hidden;
 }}
 .reg-leg {{
   display: flex; flex-wrap: wrap; gap: 3px 8px;
-  font-size: 7.4px; font-weight: 700; color: #2D2C28;
-  padding: 2px 0;
+  font-size: 7.5px; font-weight: 700; color: #2D2C28;
+  padding: 1px 0;
 }}
 .leg-item {{ display: inline-flex; align-items: center; gap: 3px; }}
 .leg-item i {{ width: 7.5px; height: 7.5px; border-radius: 50%; display: inline-block; }}
-.africa-strip {{
-  background: #FEF3C7; border: 1px solid #D97706; border-radius: 2px;
-  padding: 3.5px 6px; font-size: 7px; line-height: 1.24; color: #78350F;
+.mkt-box {{
+  background: #F2EDE1; border: 1px solid #D5CEBE; border-radius: 2px;
+  padding: 5px 7px; margin-top: auto;
+  display: flex; flex-direction: column; gap: 2.5px;
 }}
-.africa-strip b {{ color: #92400E; }}
-.sure-box {{
-  background: #F2EDE1; border: 1px solid #D8D0C0; border-radius: 2px;
-  padding: 4px 6px; margin-top: auto;
-  font-size: 7.1px; line-height: 1.32; color: #2D2C28;
+.mkt-h {{
+  font-size: 7.6px; font-weight: 900; color: #161614; letter-spacing: 0.35px;
+  border-bottom: 1px solid #CFC8B8; padding-bottom: 2px; margin-bottom: 1px;
 }}
-.sure-box .sure-t {{ font-weight: 900; color: #161614; margin-bottom: 2px; font-size: 7.4px; }}
+.m-row {{
+  display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: baseline;
+  font-size: 7.5px; line-height: 1.22;
+}}
+.m-name {{ font-weight: 700; color: #1F1E1B; }}
+.m-val {{ color: #57534A; font-weight: 600; font-size: 7.1px; }}
+.m-chg {{ font-weight: 800; min-width: 40px; text-align: right; }}
+.m-chg.up {{ color: #047857; }}
+.m-chg.dn {{ color: #B91C1C; }}
 .briefs-panel {{
-  display: flex; flex-direction: column; gap: 3px; min-height: 0;
+  display: flex; flex-direction: column; gap: 4px; min-height: 0;
 }}
 .b-cols {{
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
@@ -645,33 +647,19 @@ html, body {{
 .b-col:first-child {{ border-left: none; padding-left: 0; }}
 .b-row {{
   display: flex; align-items: flex-start; gap: 4px;
-  font-size: 7.55px; line-height: 1.18; color: #1F1E1B;
+  font-size: 8.15px; line-height: 1.2; color: #1F1E1B;
 }}
 .b-num {{
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 13px; height: 13px; border-radius: 50%;
-  color: #FFF; font-size: 6.7px; font-weight: 800; margin-top: 0.5px; flex-shrink: 0;
+  min-width: 13.5px; height: 13.5px; border-radius: 50%;
+  color: #FFF; font-size: 6.9px; font-weight: 800; margin-top: 0.5px; flex-shrink: 0;
 }}
 .b-txt b {{ color: #111110; }}
-.b-src {{ color: #6B665B; font-size: 6.7px; font-weight: 600; }}
-.date-check {{
-  display: flex; align-items: stretch; gap: 7px;
-  border: 1.4px solid #A61C1C; background: #FDF6F5; border-radius: 2px;
-  padding: 3px 7px 3px 0;
-}}
-.dc-tag {{
-  background: #A61C1C; color: #FFF; font-size: 7.8px; font-weight: 900;
-  padding: 3px 7px; display: flex; align-items: center; text-align: center;
-  line-height: 1.1; flex-shrink: 0;
-}}
-.dc-body {{
-  font-size: 7.25px; line-height: 1.24; color: #262320;
-}}
-.dc-body b {{ color: #7F1D1D; }}
+.b-src {{ color: #6B665B; font-size: 7px; font-weight: 600; }}
 .footer {{
   display: flex; justify-content: space-between; align-items: center;
-  font-size: 7px; color: #57534A; font-weight: 600;
-  border-top: 1px solid #D5CEBE; padding-top: 2px;
+  font-size: 7.2px; color: #57534A; font-weight: 600;
+  border-top: 1px solid #D5CEBE; padding-top: 2.5px;
 }}
 </style>
 </head>
@@ -699,27 +687,19 @@ html, body {{
       <div class="sec-h">WHERE IT HAPPENED <span>pins #1–13 · dots #14–50</span></div>
       <div class="map-box">{world_svg}</div>
       <div class="reg-leg">{reg_legend}</div>
-      <div class="africa-strip"><b>GLOBAL REACH:</b> 50 distinct stories across 35+ countries, including 8 African nations (Sudan, DRC, Senegal, Nigeria, Libya, Morocco, Ethiopia, South Africa).</div>
-      <div class="sure-box">
-        <div class="sure-t">HOW SURE (VERIFICATION KEY)</div>
-        <div>{status_pill("CONFIRMED")} 2+ major outlets · {status_pill("OFFICIAL")} court, agency or result</div>
-        <div style="margin-top:2px">{status_pill("REPORTED")} single major outlet · {status_pill("CLAIM")} one side's account</div>
+      <div class="mkt-box">
+        <div class="mkt-h">MARKETS AT CLOSE · MON 23 NOV</div>
+        {mkt_rows}
       </div>
     </div>
     <div class="briefs-panel">
-      <div class="sec-h">ALSO ON MONDAY 23 NOVEMBER — 37 MORE VERIFIED STORIES <span>numbered by region</span></div>
+      <div class="sec-h">ALSO ON MONDAY 23 NOVEMBER <span>37 more stories</span></div>
       <div class="b-cols">{"".join(brief_cols_html)}</div>
     </div>
   </section>
-  <section class="date-check">
-    <div class="dc-tag">DATE<br>CHECK</div>
-    <div class="dc-body">
-      <b>Audit:</b> {esc(data["date_check_left_out"])} <b>{esc(data["date_check_not_yet"])}</b>
-    </div>
-  </section>
   <footer class="footer">
-    <span>Every story happened, or was first reported, on Monday 23 November 2026 (UTC/local). Claims attributed.</span>
-    <span>Sources named beside each story · Original vector illustrations · 50 unique stories</span>
+    <span>Monday 23 November 2026 · World Edition</span>
+    <span>Sources: Reuters, AP, BBC, Al Jazeera, Guardian, WFP, WHO, FIFA, S&amp;P Global</span>
   </footer>
 </div>
 </body>
