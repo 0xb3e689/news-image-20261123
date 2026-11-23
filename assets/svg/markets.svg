@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 230" preserveAspectRatio="xMidYMid slice">
+<!-- Asian markets: AI bubble crash illustration -->
   <defs><linearGradient id="b3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a0a1a"/><stop offset="100%" stop-color="#1a1a3a"/></linearGradient></defs>
   <rect width="320" height="230" fill="url(#b3)"/>
   <line x1="0" y1="58" x2="320" y2="58" stroke="#2a2a4a" stroke-width="0.5" opacity="0.5"/>
