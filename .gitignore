@@ -1,3 +1,4 @@
-# Ignore everything - this is just a workspace marker
-/*
-!.gitignore
+__pycache__/
+*.pyc
+.DS_Store
+out/
