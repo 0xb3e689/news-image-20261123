@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+  <defs><linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a1628"/><stop offset="60%" stop-color="#1a3050"/><stop offset="100%" stop-color="#2a4568"/></linearGradient></defs>
+  <rect width="400" height="300" fill="url(#sea)"/>
+  <path d="M0,180 Q50,170 100,180 Q150,190 200,175 Q250,160 300,185 Q350,190 400,175 L400,300 L0,300Z" fill="#143058" opacity="0.6"/>
+  <path d="M0,210 Q60,200 120,215 Q180,225 240,205 Q300,195 360,215 Q380,220 400,210 L400,300 L0,300Z" fill="#0d2240" opacity="0.8"/>
+  <path d="M0,240 Q80,230 160,245 Q240,255 320,235 Q360,230 400,240 L400,300 L0,300Z" fill="#091830"/>
+  <polygon points="120,50 160,50 180,75 140,100 100,75" fill="#2a2a2a"/>
+  <rect x="115" y="48" width="10" height="20" fill="#1a1a1a"/>
+  <rect x="155" y="48" width="10" height="20" fill="#1a1a1a"/>
+  <polygon points="250,65 290,65 310,90 270,115 230,90" fill="#3a3a3a"/>
+  <rect x="245" y="63" width="10" height="20" fill="#2a2a2a"/>
+  <rect x="285" y="63" width="10" height="20" fill="#2a2a2a"/>
+  <ellipse cx="150" cy="72" rx="18" ry="6" fill="#c84020" opacity="0.9"/>
+  <ellipse cx="150" cy="60" rx="12" ry="8" fill="#e86030" opacity="0.8"/>
+  <ellipse cx="150" cy="50" rx="8" ry="6" fill="#f08020" opacity="0.7"/>
+  <ellipse cx="280" cy="87" rx="18" ry="6" fill="#c84020" opacity="0.9"/>
+  <ellipse cx="280" cy="75" rx="12" ry="8" fill="#e86030" opacity="0.8"/>
+  <ellipse cx="280" cy="65" rx="8" ry="6" fill="#f08020" opacity="0.7"/>
+  <ellipse cx="80" cy="290" rx="60" ry="15" fill="#2a1010" opacity="0.4"/>
+  <ellipse cx="320" cy="285" rx="50" ry="12" fill="#2a1010" opacity="0.3"/>
+  <line x1="170" y1="100" x2="170" y2="180" stroke="#5a3a3a" stroke-width="2" opacity="0.5"/>
+  <line x1="300" y1="115" x2="300" y2="190" stroke="#5a3a3a" stroke-width="2" opacity="0.4"/>
+  <polygon points="340,170 360,140 380,170 370,200 350,200" fill="#1a3040" opacity="0.6"/>
+  <polygon points="30,185 55,155 70,185 65,210 40,210" fill="#1a3040" opacity="0.5"/>
+</svg>
