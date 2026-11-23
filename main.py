@@ -1,14 +1,27 @@
 #!/usr/bin/env python3
-"""Copy pre-built editorial front-page image to /output/entry.png.
+"""Write the Monday 23 November 2026 world-news front-page image to /output/entry.png.
 
-The image is a 1024x1024 PNG summarizing world news of 23 November 2026:
-40 stories across 6 continents with 4 lead illustrated cards.
-Build: python3 scripts/generate2.py regenerates assets/entry.png.
+The asset is a 1024x1024 PNG summarizing 50 verified stories from Monday 23 November 2026
+across 7 regions (Europe, Americas, Asia, Africa, Middle East, Oceania, Global), with
+13 custom vector-illustrated cards, a UTC timeline, regional breadth bar, world map,
+37 numbered briefs, and a strict Date Check audit box.
 """
-import os, shutil
 
-os.makedirs('/output', exist_ok=True)
-src = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', 'entry.png')
-dst = '/output/entry.png'
-shutil.copy2(src, dst)
-print(f'Written {os.path.getsize(dst)} bytes to /output/entry.png')
+import os
+import shutil
+
+
+def main() -> None:
+    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
+    os.makedirs(out_dir, exist_ok=True)
+    src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "entry.png")
+    dst = os.path.join(out_dir, "entry.png")
+    shutil.copy2(src, dst)
+    written = os.path.getsize(dst)
+    if written <= 0 or written > 1048576:
+        raise RuntimeError(f"Unexpected entry.png size: {written} bytes")
+    print(f"Written {written} bytes to {dst}")
+
+
+if __name__ == "__main__":
+    main()

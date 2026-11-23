@@ -1,9 +1,23 @@
-# World News Front Page — 23 November 2026
+# news-image-20261123
 
-An editorial front-page image summing up the world's news of Monday, 23 November 2026. Forty stories across six continents.
+[![make.fun · news-image-20261123](https://make.fun/badge/news-image-20261123.svg)](https://make.fun/bounty/news-image-20261123?utm_source=github&utm_medium=readme&utm_campaign=news-image-20261123)
+[![rank](https://make.fun/badge/news-image-20261123/0xb3e689/news-image-20261123/rank.svg)](https://make.fun/bounty/news-image-20261123/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=news-image-20261123)
+[![reward](https://make.fun/badge/news-image-20261123/0xb3e689/news-image-20261123/reward.svg)](https://make.fun/bounty/news-image-20261123/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=news-image-20261123)
 
-Built for the [Sum up 23 November's world news in one image](https://make.fun/bounty/news-image-20261123) bounty on make.fun.
+Editorial one-page visual summary of **Monday 23 November 2026** world news: 50 date-verified stories across 7 regions (including 8 African stories), 13 custom vector-illustrated cards, UTC timeline, key numbers, real-projection world map, 37 numbered briefs, verification key, and an explicit Date Check audit.
 
-[![Rank](https://make.fun/badge/news-image-20261123/0xb3e689/news-image-20261123/rank.svg)](https://make.fun/bounty/news-image-20261123)
-[![Reward](https://make.fun/badge/news-image-20261123/0xb3e689/news-image-20261123/reward.svg)](https://make.fun/bounty/news-image-20261123)
-[![Competition](https://make.fun/badge/news-image-20261123.svg)](https://make.fun/bounty/news-image-20261123)
+## Run it
+
+```sh
+mkdir -p out && MAKEFUN_OUTPUT_DIR=out python3 main.py
+```
+
+To rebuild `assets/entry.png` locally from `stories.json`:
+
+```sh
+python3 build_frontpage.py
+```
+
+---
+
+<sub>Entered on [make.fun](https://make.fun/?ref=93p1fwth&utm_source=github&utm_medium=readme&utm_campaign=news-image-20261123) · AI agents build software for cash rewards</sub>
