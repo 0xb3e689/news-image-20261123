@@ -5,23 +5,29 @@ import html
 import json
 import os
 import subprocess
-import sys
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 STORIES_PATH = os.path.join(ROOT, "stories.json")
 OUT_PNG = os.path.join(ROOT, "assets", "entry.png")
-TMP_HTML = "/tmp/news_20261123_v8.html"
-TMP_QA300 = "/tmp/news_20261123_v8_300px.png"
+TMP_HTML = "/tmp/news_20261123_v10.html"
+TMP_QA300 = "/tmp/news_20261123_v10_300px.png"
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 REGION_COLORS = {
     "EU": "#1E4D8C",
-    "AM": "#6D28D9",
     "AS": "#047857",
     "AF": "#B45309",
+    "AM": "#6D28D9",
     "ME": "#B91C1C",
     "OC": "#0F766E",
     "GL": "#334155",
+}
+
+STATUS_STYLES = {
+    "OFFICIAL": ("#1E3A8A", "#EFF6FF", "#93C5FD"),
+    "CONFIRMED": ("#065F46", "#ECFDF5", "#6EE7B7"),
+    "REPORTED": ("#92400E", "#FFFBEB", "#FCD34D"),
+    "CLAIM": ("#991B1B", "#FEF2F2", "#FCA5A5"),
 }
 
 # Simplified real-world landmass polygons (lon, lat) in equirectangular projection
@@ -77,57 +83,54 @@ def esc(text: str) -> str:
     return html.escape(text, quote=True)
 
 
-def proj(lon: float, lat: float, w: float = 248.0, h: float = 166.0):
+def proj(lon: float, lat: float, w: float = 248.0, h: float = 160.0):
     x = (lon + 180.0) / 360.0 * w
-    # Crop latitudes from +80 to -58 for fuller vertical framing
     y = (80.0 - lat) / 138.0 * h
     return round(x, 1), round(y, 1)
 
 
 def render_world_map(data: dict) -> str:
-    w, h = 248.0, 166.0
+    w, h = 248.0, 160.0
     parts = [
         f'<svg viewBox="0 0 {int(w)} {int(h)}" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">',
         f'<rect width="{int(w)}" height="{int(h)}" fill="#D7E8F1" rx="3"/>',
     ]
-    # Subtle latitude/longitude graticule
     for lat in (-30, 0, 30, 60):
         _, yy = proj(0, lat, w, h)
         parts.append(f'<line x1="0" y1="{yy}" x2="{int(w)}" y2="{yy}" stroke="#C3DAE6" stroke-width="0.6" stroke-dasharray="2,2"/>')
     for lon in (-120, -60, 0, 60, 120):
         xx, _ = proj(lon, 0, w, h)
         parts.append(f'<line x1="{xx}" y1="0" x2="{xx}" y2="{int(h)}" stroke="#C3DAE6" stroke-width="0.6" stroke-dasharray="2,2"/>')
-    # Landmasses
     for poly in LAND_POLYGONS:
         pts = " ".join(f"{proj(lon, lat, w, h)[0]},{proj(lon, lat, w, h)[1]}" for lon, lat in poly)
         parts.append(f'<polygon points="{pts}" fill="#E6DEC8" stroke="#B7AD96" stroke-width="0.7" stroke-linejoin="round"/>')
-    # Brief dots (#14-#50)
     for b in data["briefs"]:
         x, y = proj(b["lon"], b["lat"], w, h)
         col = REGION_COLORS[b["region"]]
         parts.append(f'<circle cx="{x}" cy="{y}" r="2.4" fill="{col}" opacity="0.76" stroke="#FAF8F3" stroke-width="0.5"/>')
-    # Featured story numbered pins (#1-#13) with clean separation in Europe/Mid-East
+    # Manual offsets so pins #1-#11 in Europe have clean separation
     offsets = {
         1: (4, 0),
-        2: (4, -3),
-        4: (-7, 6),
-        5: (3, 1),
-        8: (-8, -6),
-        10: (5, -8),
-        13: (6, 2),
+        2: (5, -2),
+        3: (7, -3),
+        4: (-8, 8),
+        5: (-10, 0),
+        6: (0, 2),
+        8: (-8, -12),
+        9: (8, 7),
+        10: (-2, 1),
     }
-    featured = data["heroes"] + data["features"]
-    for st in featured:
+    for st in data["heroes"] + data["features"]:
         x, y = proj(st["lon"], st["lat"], w, h)
         dx, dy = offsets.get(st["id"], (0, 0))
         x = max(8.0, min(w - 8.0, x + dx))
         y = max(8.0, min(h - 8.0, y + dy))
         col = REGION_COLORS[st["region"]]
-        r = 6.5 if st["id"] <= 3 else 5.6
-        fs = 7.4 if st["id"] < 10 else 6.6
+        r = 6.6 if st["id"] <= 3 else 5.8
+        fs = 7.6 if st["id"] < 10 else 6.8
         parts.append(
             f'<g><circle cx="{x}" cy="{y}" r="{r}" fill="{col}" stroke="#FFFFFF" stroke-width="1.2"/>'
-            f'<text x="{x}" y="{y + 2.5}" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,Arial,sans-serif" font-size="{fs}" font-weight="800">{st["id"]}</text></g>'
+            f'<text x="{x}" y="{y + 2.6}" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,Arial,sans-serif" font-size="{fs}" font-weight="800">{st["id"]}</text></g>'
         )
     parts.append("</svg>")
     return "".join(parts)
@@ -135,258 +138,211 @@ def render_world_map(data: dict) -> str:
 
 def hero_art(kind: str) -> str:
     if kind == "nvidia":
-        return """<svg viewBox="0 0 326 88" width="100%" height="88" xmlns="http://www.w3.org/2000/svg">
+        return """<svg viewBox="0 0 326 96" width="100%" height="96" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="nvBg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0B1324"/><stop offset="100%" stop-color="#13253F"/>
+      <stop offset="0%" stop-color="#0B1324"/><stop offset="100%" stop-color="#132641"/>
     </linearGradient>
     <linearGradient id="nvArea" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#10B981" stop-opacity="0.45"/><stop offset="100%" stop-color="#10B981" stop-opacity="0.02"/>
+      <stop offset="0%" stop-color="#10B981" stop-opacity="0.48"/><stop offset="100%" stop-color="#10B981" stop-opacity="0.02"/>
     </linearGradient>
   </defs>
-  <rect width="326" height="88" fill="url(#nvBg)"/>
+  <rect width="326" height="96" fill="url(#nvBg)"/>
   <g stroke="#243B5C" stroke-width="0.7">
-    <line x1="0" y1="24" x2="214" y2="24"/><line x1="0" y1="46" x2="214" y2="46"/><line x1="0" y1="68" x2="214" y2="68"/>
+    <line x1="0" y1="26" x2="196" y2="26"/><line x1="0" y1="50" x2="196" y2="50"/><line x1="0" y1="74" x2="196" y2="74"/>
   </g>
-  <path d="M12,42 L48,54 L84,65 L112,72 L130,67 L148,46 L176,27 L204,16 L204,84 L12,84 Z" fill="url(#nvArea)"/>
-  <polyline points="12,42 48,54 84,65 112,72" fill="none" stroke="#F87171" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <polyline points="112,72 130,67 148,46 176,27 204,16" fill="none" stroke="#34D399" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="112" cy="72" r="3.5" fill="#F87171" stroke="#0B1324" stroke-width="1.2"/>
-  <circle cx="204" cy="16" r="4.5" fill="#34D399" stroke="#FFFFFF" stroke-width="1.5"/>
-  <text x="112" y="83" text-anchor="middle" fill="#FCA5A5" font-family="system-ui,sans-serif" font-size="7.4" font-weight="700">FRI $125.53</text>
-  <rect x="7" y="6" width="164" height="16" rx="2" fill="#059669"/>
-  <text x="89" y="17" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="8.2" font-weight="800">CEO REINSTATED · WALL ST RALLY</text>
-  <rect x="216" y="6" width="103" height="76" rx="3" fill="#08101E" stroke="#2D4A6F" stroke-width="1"/>
-  <text x="223" y="19" fill="#94A3B8" font-family="system-ui,sans-serif" font-size="7.2" font-weight="700">MON 23 NOV CLOSE</text>
-  <text x="223" y="36" fill="#34D399" font-family="system-ui,sans-serif" font-size="13.5" font-weight="900">+31.3%</text>
-  <text x="312" y="35" text-anchor="end" fill="#E2E8F0" font-family="system-ui,sans-serif" font-size="8" font-weight="800">NVDA</text>
-  <text x="223" y="45" fill="#94A3B8" font-family="system-ui,sans-serif" font-size="7" font-weight="700">Close: $164.88</text>
-  <line x1="223" y1="50" x2="312" y2="50" stroke="#1E3452" stroke-width="0.8"/>
-  <text x="223" y="62" fill="#CBD5E1" font-family="system-ui,sans-serif" font-size="8.3" font-weight="700">S&amp;P 500</text>
-  <text x="312" y="62" text-anchor="end" fill="#34D399" font-family="system-ui,sans-serif" font-size="8.8" font-weight="800">+4.73%</text>
-  <text x="223" y="75" fill="#CBD5E1" font-family="system-ui,sans-serif" font-size="8.3" font-weight="700">NASDAQ</text>
-  <text x="312" y="75" text-anchor="end" fill="#34D399" font-family="system-ui,sans-serif" font-size="8.8" font-weight="800">+6.5%</text>
+  <path d="M10,46 L44,58 L76,69 L102,77 L120,71 L140,48 L166,27 L190,15 L190,92 L10,92 Z" fill="url(#nvArea)"/>
+  <polyline points="10,46 44,58 76,69 102,77" fill="none" stroke="#F87171" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="102,77 120,71 140,48 166,27 190,15" fill="none" stroke="#34D399" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="102" cy="77" r="3.6" fill="#F87171" stroke="#0B1324" stroke-width="1.2"/>
+  <circle cx="190" cy="15" r="4.8" fill="#34D399" stroke="#FFFFFF" stroke-width="1.6"/>
+  <text x="102" y="90" text-anchor="middle" fill="#FCA5A5" font-family="system-ui,sans-serif" font-size="8.2" font-weight="800">FRI $125.53</text>
+  <rect x="8" y="7" width="144" height="17" rx="2" fill="#059669"/>
+  <text x="80" y="18.5" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="8.8" font-weight="900">JENSEN HUANG RETURNS</text>
+  <rect x="200" y="7" width="119" height="82" rx="3" fill="#07101E" stroke="#2D4A6F" stroke-width="1"/>
+  <text x="260" y="34" text-anchor="middle" fill="#34D399" font-family="system-ui,sans-serif" font-size="24" font-weight="900">+31.3%</text>
+  <text x="260" y="48" text-anchor="middle" fill="#E2E8F0" font-family="system-ui,sans-serif" font-size="8.8" font-weight="800">NVDA $164.88</text>
+  <line x1="210" y1="55" x2="309" y2="55" stroke="#1E3452" stroke-width="0.9"/>
+  <text x="210" y="69" fill="#CBD5E1" font-family="system-ui,sans-serif" font-size="9" font-weight="700">S&amp;P 500</text>
+  <text x="309" y="69" text-anchor="end" fill="#34D399" font-family="system-ui,sans-serif" font-size="9.6" font-weight="900">+4.73%</text>
+  <text x="210" y="83" fill="#CBD5E1" font-family="system-ui,sans-serif" font-size="9" font-weight="700">NASDAQ</text>
+  <text x="309" y="83" text-anchor="end" fill="#34D399" font-family="system-ui,sans-serif" font-size="9.6" font-weight="900">+6.5%</text>
 </svg>"""
     if kind == "refinery":
-        return """<svg viewBox="0 0 326 88" width="100%" height="88" xmlns="http://www.w3.org/2000/svg">
-  <rect width="166" height="88" fill="#182234"/>
-  <rect x="166" y="0" width="160" height="88" fill="#173854"/>
-  <rect x="0" y="64" width="166" height="24" fill="#2A3447"/>
+        return """<svg viewBox="0 0 326 96" width="100%" height="96" xmlns="http://www.w3.org/2000/svg">
+  <rect width="326" height="96" fill="#182334"/>
+  <rect x="0" y="68" width="326" height="28" fill="#253145"/>
   <!-- Refinery towers -->
-  <rect x="20" y="34" width="12" height="30" fill="#475569"/>
-  <rect x="38" y="26" width="10" height="38" fill="#64748B"/>
-  <rect x="54" y="42" width="24" height="22" fill="#334155"/>
-  <rect x="84" y="30" width="11" height="34" fill="#475569"/>
-  <rect x="102" y="45" width="26" height="19" fill="#334155"/>
-  <!-- Flames & smoke -->
-  <path d="M52,44 Q64,12 76,42 Q88,18 96,42 Z" fill="#EA580C"/>
-  <path d="M58,44 Q66,22 74,43 Q82,27 89,44 Z" fill="#FACC15"/>
-  <circle cx="70" cy="18" r="9" fill="#475569" opacity="0.65"/>
-  <circle cx="84" cy="12" r="11" fill="#334155" opacity="0.55"/>
-  <!-- Drone icon -->
-  <path d="M126,22 L144,26 L126,30 L130,26 Z" fill="#E2E8F0"/>
-  <line x1="112" y1="26" x2="124" y2="26" stroke="#F87171" stroke-width="1.2" stroke-dasharray="2,2"/>
-  <rect x="6" y="6" width="114" height="15" rx="2" fill="#B91C1C"/>
-  <text x="63" y="16.5" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="8.1" font-weight="800">PERM · 1,500 KM DEEP</text>
-  <text x="8" y="80" fill="#CBD5E1" font-family="system-ui,sans-serif" font-size="7.7" font-weight="700">LUKOIL + NOVOSHAKHTINSK</text>
-  <!-- Right panel: Libya naval strike -->
-  <line x1="166" y1="0" x2="166" y2="88" stroke="#FAF8F3" stroke-width="2"/>
-  <rect x="167" y="54" width="159" height="34" fill="#0F2942"/>
-  <path d="M167,56 Q190,51 215,56 T265,56 T326,56" fill="none" stroke="#38BDF8" stroke-width="1.3" opacity="0.6"/>
-  <!-- Capsizing corvette Merkury -->
-  <g transform="translate(238,54) rotate(-18)">
-    <polygon points="-36,0 34,0 26,12 -30,12" fill="#475569" stroke="#CBD5E1" stroke-width="0.9"/>
-    <rect x="-14" y="-11" width="20" height="11" fill="#64748B"/>
-    <line x1="-4" y1="-11" x2="-4" y2="-20" stroke="#CBD5E1" stroke-width="1.5"/>
-  </g>
-  <circle cx="242" cy="44" r="9" fill="#F97316" opacity="0.9"/>
-  <circle cx="242" cy="44" r="4.5" fill="#FEF08A"/>
-  <rect x="174" y="6" width="144" height="15" rx="2" fill="#1E4D8C"/>
-  <text x="246" y="16.5" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="8.1" font-weight="800">BENGHAZI · CORVETTE SUNK</text>
-  <text x="175" y="80" fill="#BAE6FD" font-family="system-ui,sans-serif" font-size="7.7" font-weight="700">MERKURY SUNK · MV ANGARA HIT</text>
+  <rect x="16" y="34" width="14" height="34" fill="#475569"/>
+  <rect x="36" y="24" width="12" height="44" fill="#64748B"/>
+  <rect x="54" y="42" width="28" height="26" fill="#334155"/>
+  <rect x="88" y="30" width="13" height="38" fill="#475569"/>
+  <rect x="108" y="46" width="30" height="22" fill="#334155"/>
+  <!-- Bold flames -->
+  <path d="M52,44 Q66,8 80,42 Q94,16 104,44 Z" fill="#EA580C"/>
+  <path d="M59,44 Q68,20 77,43 Q86,26 95,44 Z" fill="#FACC15"/>
+  <circle cx="74" cy="14" r="10" fill="#475569" opacity="0.6"/>
+  <circle cx="92" cy="10" r="11" fill="#334155" opacity="0.5"/>
+  <!-- Drone approaching -->
+  <path d="M126,22 L148,27 L126,32 L131,27 Z" fill="#F8FAFC"/>
+  <line x1="108" y1="27" x2="123" y2="27" stroke="#F87171" stroke-width="1.6" stroke-dasharray="3,2"/>
+  <!-- Big focal figure block on right -->
+  <text x="242" y="37" text-anchor="middle" fill="#FACC15" font-family="system-ui,sans-serif" font-size="25" font-weight="900">1,500 km</text>
+  <text x="242" y="52" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="9.5" font-weight="800">PERM &amp; NOVOSHAKHTINSK</text>
+  <rect x="162" y="60" width="156" height="20" rx="2" fill="#B91C1C"/>
+  <text x="240" y="73.5" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="8.6" font-weight="900">UKRAINE CLAIMS BENGHAZI HIT</text>
+  <text x="12" y="86" fill="#CBD5E1" font-family="system-ui,sans-serif" font-size="8.2" font-weight="800">LUKOIL REFINERY STRUCK</text>
 </svg>"""
-    return """<svg viewBox="0 0 326 88" width="100%" height="88" xmlns="http://www.w3.org/2000/svg">
-  <rect width="326" height="88" fill="#E8D8BE"/>
-  <!-- Nile confluence band -->
-  <path d="M0,62 C65,58 115,44 162,48 C215,52 260,34 326,38 L326,52 C260,48 215,66 162,62 C115,58 65,72 0,76 Z" fill="#60A5FA" opacity="0.55"/>
-  <!-- Khartoum buildings -->
-  <rect x="12" y="38" width="32" height="30" fill="#B45309" opacity="0.82"/>
-  <rect x="50" y="44" width="24" height="24" fill="#92400E" opacity="0.82"/>
-  <!-- UN compound box (shifted left of starburst so text is 100% clear) -->
-  <rect x="82" y="28" width="76" height="40" rx="2" fill="#FFFFFF" stroke="#0284C7" stroke-width="2"/>
-  <rect x="82" y="28" width="76" height="14" fill="#0284C7"/>
-  <text x="120" y="38" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="8.2" font-weight="900">UN COMPOUND</text>
-  <rect x="96" y="48" width="14" height="12" fill="#BAE6FD"/>
-  <rect x="128" y="48" width="14" height="12" fill="#BAE6FD"/>
-  <!-- Impact burst cleanly at right roof edge -->
-  <polygon points="168,26 174,17 177,26 186,23 180,31 187,38 177,36 174,45 170,36 160,37 166,31" fill="#DC2626"/>
-  <circle cx="174" cy="31" r="4" fill="#FDE047"/>
-  <!-- Right famine warning card -->
-  <rect x="192" y="9" width="127" height="70" rx="3" fill="#7F1D1D"/>
-  <text x="200" y="23" fill="#FCA5A5" font-family="system-ui,sans-serif" font-size="7.1" font-weight="800">WFP · UN SECURITY COUNCIL</text>
-  <text x="200" y="40" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="11.5" font-weight="900">FAMINE RISK</text>
-  <text x="200" y="54" fill="#FDE68A" font-family="system-ui,sans-serif" font-size="8.4" font-weight="800">SUDAN &amp; SOMALIA</text>
-  <text x="200" y="68" fill="#FECACA" font-family="system-ui,sans-serif" font-size="7.4" font-weight="600">Triple trade chokepoint</text>
-  <rect x="8" y="6" width="118" height="15" rx="2" fill="#B45309"/>
-  <text x="67" y="16.5" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="8.1" font-weight="800">KHARTOUM DRONE HIT</text>
+    return """<svg viewBox="0 0 326 96" width="100%" height="96" xmlns="http://www.w3.org/2000/svg">
+  <rect width="326" height="96" fill="#DCE9F5"/>
+  <rect x="0" y="68" width="326" height="28" fill="#334155"/>
+  <line x1="16" y1="82" x2="310" y2="82" stroke="#CBD5E1" stroke-width="1.6" stroke-dasharray="10,8" opacity="0.6"/>
+  <!-- ATC Control Tower -->
+  <rect x="26" y="30" width="16" height="38" fill="#475569"/>
+  <polygon points="16,30 52,30 46,16 22,16" fill="#1E293B"/>
+  <rect x="21" y="20" width="26" height="6" fill="#38BDF8"/>
+  <line x1="34" y1="6" x2="34" y2="16" stroke="#1E293B" stroke-width="2"/>
+  <circle cx="34" cy="6" r="2.5" fill="#DC2626"/>
+  <!-- Grounded plane with red prohibition sign -->
+  <path d="M74,56 L128,56 L142,46 L149,46 L140,60 L74,60 Z" fill="#1E293B"/>
+  <polygon points="94,56 108,42 115,42 106,56" fill="#475569"/>
+  <circle cx="110" cy="52" r="22" fill="none" stroke="#DC2626" stroke-width="4.2"/>
+  <line x1="94" y1="36" x2="126" y2="68" stroke="#DC2626" stroke-width="4.2"/>
+  <!-- Huge stat callout -->
+  <text x="242" y="38" text-anchor="middle" fill="#B91C1C" font-family="system-ui,sans-serif" font-size="28" font-weight="900">07–21h</text>
+  <text x="242" y="53" text-anchor="middle" fill="#1E293B" font-family="system-ui,sans-serif" font-size="9.8" font-weight="900">ATC SHUTDOWN</text>
+  <rect x="174" y="60" width="138" height="20" rx="2" fill="#1E293B"/>
+  <text x="243" y="73.5" text-anchor="middle" fill="#F8FAFC" font-family="system-ui,sans-serif" font-size="8.6" font-weight="800">BRUSSELS FLIGHTS HALTED</text>
 </svg>"""
 
 
 def feature_art(kind: str) -> str:
     if kind == "spain":
-        return """<svg viewBox="0 0 193 52" width="100%" height="52" xmlns="http://www.w3.org/2000/svg">
-  <rect width="193" height="52" fill="#F1E9DA"/>
-  <rect x="0" y="0" width="193" height="5" fill="#AA151B"/>
-  <rect x="0" y="5" width="193" height="4" fill="#F1BF00"/>
+        return """<svg viewBox="0 0 242 56" width="100%" height="56" xmlns="http://www.w3.org/2000/svg">
+  <rect width="242" height="56" fill="#F2EBD9"/>
+  <rect width="242" height="5" fill="#AA151B"/>
+  <rect y="5" width="242" height="4" fill="#F1BF00"/>
   <!-- Scales of justice -->
-  <line x1="36" y1="16" x2="36" y2="44" stroke="#1E3A8A" stroke-width="2.5"/>
-  <line x1="18" y1="22" x2="54" y2="22" stroke="#1E3A8A" stroke-width="2.2"/>
-  <path d="M18,22 L12,34 L24,34 Z" fill="none" stroke="#B45309" stroke-width="1.3"/>
-  <path d="M54,22 L48,34 L60,34 Z" fill="none" stroke="#B45309" stroke-width="1.3"/>
-  <rect x="26" y="44" width="20" height="3" fill="#1E3A8A"/>
-  <!-- Stamp -->
-  <rect x="74" y="16" width="108" height="24" rx="3" fill="#065F46"/>
-  <text x="128" y="28" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="9.5" font-weight="900">AMNESTY</text>
-  <text x="128" y="37" text-anchor="middle" fill="#A7F3D0" font-family="system-ui,sans-serif" font-size="7" font-weight="700">2017 CASE CLOSED</text>
+  <line x1="42" y1="16" x2="42" y2="47" stroke="#1E3A8A" stroke-width="2.8"/>
+  <line x1="20" y1="23" x2="64" y2="23" stroke="#1E3A8A" stroke-width="2.4"/>
+  <path d="M20,23 L13,37 L27,37 Z" fill="none" stroke="#B45309" stroke-width="1.6"/>
+  <path d="M64,23 L57,37 L71,37 Z" fill="none" stroke="#B45309" stroke-width="1.6"/>
+  <rect x="30" y="47" width="24" height="3.5" fill="#1E3A8A"/>
+  <text x="158" y="33" text-anchor="middle" fill="#065F46" font-family="system-ui,sans-serif" font-size="22" font-weight="900">AMNESTY</text>
+  <text x="158" y="47" text-anchor="middle" fill="#334155" font-family="system-ui,sans-serif" font-size="8.6" font-weight="800">2017 CATALAN CASE CLOSED</text>
 </svg>"""
-    if kind == "belgium":
-        return """<svg viewBox="0 0 193 52" width="100%" height="52" xmlns="http://www.w3.org/2000/svg">
-  <rect width="193" height="52" fill="#DCE8F2"/>
-  <rect x="0" y="39" width="193" height="13" fill="#475569"/>
-  <!-- Control tower -->
-  <rect x="22" y="18" width="10" height="21" fill="#334155"/>
-  <polygon points="16,18 38,18 34,10 20,10" fill="#1E293B"/>
-  <rect x="19" y="12" width="16" height="4" fill="#38BDF8"/>
-  <!-- Grounded plane -->
-  <path d="M62,33 L96,33 L104,28 L108,28 L103,35 L62,35 Z" fill="#1E293B"/>
-  <circle cx="84" cy="31" r="14" fill="none" stroke="#DC2626" stroke-width="2.6"/>
-  <line x1="74" y1="21" x2="94" y2="41" stroke="#DC2626" stroke-width="2.6"/>
-  <rect x="114" y="8" width="72" height="26" rx="2" fill="#B91C1C"/>
-  <text x="150" y="20" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="9" font-weight="900">07–21h</text>
-  <text x="150" y="30" text-anchor="middle" fill="#FECACA" font-family="system-ui,sans-serif" font-size="7.2" font-weight="800">ATC HALTED</text>
+    if kind == "rohingya":
+        return """<svg viewBox="0 0 242 56" width="100%" height="56" xmlns="http://www.w3.org/2000/svg">
+  <rect width="242" height="56" fill="#EBF1F8"/>
+  <!-- UK Union Jack mini badge -->
+  <g transform="translate(10,8)">
+    <rect width="34" height="20" fill="#012169" rx="1"/>
+    <path d="M0,0 L34,20 M34,0 L0,20" stroke="#FFFFFF" stroke-width="4"/>
+    <path d="M0,0 L34,20 M34,0 L0,20" stroke="#C8102E" stroke-width="1.8"/>
+    <path d="M17,0 V20 M0,10 H34" stroke="#FFFFFF" stroke-width="6"/>
+    <path d="M17,0 V20 M0,10 H34" stroke="#C8102E" stroke-width="3.2"/>
+  </g>
+  <!-- Sanctions document with red stamp -->
+  <rect x="48" y="8" width="28" height="38" rx="2" fill="#FFFFFF" stroke="#64748B" stroke-width="1.1"/>
+  <line x1="53" y1="16" x2="71" y2="16" stroke="#94A3B8" stroke-width="1.4"/>
+  <line x1="53" y1="22" x2="71" y2="22" stroke="#94A3B8" stroke-width="1.4"/>
+  <line x1="53" y1="28" x2="67" y2="28" stroke="#94A3B8" stroke-width="1.4"/>
+  <circle cx="63" cy="37" r="6" fill="none" stroke="#B91C1C" stroke-width="1.8"/>
+  <rect x="8" y="34" width="38" height="12" rx="1.5" fill="#166534"/>
+  <text x="27" y="42.3" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="6.1" font-weight="800">COMMONS</text>
+  <text x="160" y="30" text-anchor="middle" fill="#1E3A8A" font-family="system-ui,sans-serif" font-size="21" font-weight="900">5 GENERALS</text>
+  <text x="160" y="45" text-anchor="middle" fill="#B91C1C" font-family="system-ui,sans-serif" font-size="8.4" font-weight="900">UK RECOGNISES GENOCIDE</text>
 </svg>"""
-    if kind == "drc":
-        return """<svg viewBox="0 0 193 52" width="100%" height="52" xmlns="http://www.w3.org/2000/svg">
-  <rect width="193" height="52" fill="#163038"/>
-  <!-- Hospital block -->
-  <rect x="14" y="14" width="52" height="32" rx="2" fill="#F8FAFC"/>
-  <rect x="36" y="20" width="8" height="20" fill="#DC2626"/>
-  <rect x="30" y="26" width="20" height="8" fill="#DC2626"/>
-  <!-- Warning flashes -->
-  <polygon points="72,16 79,23 73,26 81,34 71,30 74,23" fill="#F59E0B"/>
-  <rect x="88" y="8" width="97" height="36" rx="3" fill="#991B1B"/>
-  <text x="136.5" y="22" text-anchor="middle" fill="#FDE68A" font-family="system-ui,sans-serif" font-size="7.8" font-weight="800">ITURI · EBOLA ZONE</text>
-  <text x="136.5" y="36" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="10" font-weight="900">WHO PEACE PLEA</text>
+    if kind == "nasa":
+        return """<svg viewBox="0 0 242 56" width="100%" height="56" xmlns="http://www.w3.org/2000/svg">
+  <rect width="242" height="56" fill="#0F172A"/>
+  <!-- Lunar horizon + glowing fission core -->
+  <ellipse cx="48" cy="56" rx="52" ry="18" fill="#64748B"/>
+  <circle cx="48" cy="34" r="10" fill="#F59E0B" opacity="0.25"/>
+  <rect x="42" y="26" width="12" height="16" rx="2" fill="#E2E8F0"/>
+  <circle cx="48" cy="34" r="4" fill="#38BDF8"/>
+  <circle cx="18" cy="14" r="1.4" fill="#F8FAFC"/><circle cx="78" cy="12" r="1.2" fill="#F8FAFC"/><circle cx="64" cy="20" r="1" fill="#94A3B8"/>
+  <text x="164" y="32" text-anchor="middle" fill="#38BDF8" font-family="system-ui,sans-serif" font-size="24" font-weight="900">20 kW</text>
+  <text x="164" y="46" text-anchor="middle" fill="#E2E8F0" font-family="system-ui,sans-serif" font-size="8.6" font-weight="800">LUNAR REACTOR-1 · 2030</text>
 </svg>"""
     if kind == "asia_mkt":
-        return """<svg viewBox="0 0 193 52" width="100%" height="52" xmlns="http://www.w3.org/2000/svg">
-  <rect width="193" height="52" fill="#111827"/>
-  <polyline points="8,10 28,13 46,22 66,18 84,33 98,27" fill="none" stroke="#EF4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="84" cy="33" r="2.8" fill="#EF4444"/>
-  <text x="8" y="46" fill="#FCA5A5" font-family="system-ui,sans-serif" font-size="7.7" font-weight="800">KOSPI -3.3% (-5.8%)</text>
-  <rect x="108" y="7" width="78" height="38" rx="3" fill="#047857"/>
-  <text x="147" y="21" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="8.6" font-weight="900">TAIWAN BAN</text>
-  <text x="147" y="32" text-anchor="middle" fill="#D1FAE5" font-family="system-ui,sans-serif" font-size="7.4" font-weight="700">NO SHORT SELL</text>
-  <text x="147" y="41" text-anchor="middle" fill="#A7F3D0" font-family="system-ui,sans-serif" font-size="7" font-weight="700">150% MARGIN</text>
+        return """<svg viewBox="0 0 242 56" width="100%" height="56" xmlns="http://www.w3.org/2000/svg">
+  <rect width="242" height="56" fill="#111827"/>
+  <polyline points="10,12 34,16 54,28 74,23 94,43 110,34" fill="none" stroke="#EF4444" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="94" cy="43" r="3.5" fill="#EF4444"/>
+  <text x="176" y="30" text-anchor="middle" fill="#F87171" font-family="system-ui,sans-serif" font-size="23" font-weight="900">-5.8%</text>
+  <text x="176" y="45" text-anchor="middle" fill="#34D399" font-family="system-ui,sans-serif" font-size="8.4" font-weight="800">KOSPI LOW · TAIWAN BAN</text>
+</svg>"""
+    if kind == "nhs":
+        return """<svg viewBox="0 0 242 56" width="100%" height="56" xmlns="http://www.w3.org/2000/svg">
+  <rect width="242" height="56" fill="#E6F4F1"/>
+  <!-- Radiology AI scan monitor -->
+  <rect x="10" y="7" width="60" height="42" rx="3" fill="#0F172A" stroke="#0F766E" stroke-width="1.5"/>
+  <g stroke="#1E3A5F" stroke-width="0.6">
+    <line x1="25" y1="7" x2="25" y2="49"/><line x1="40" y1="7" x2="40" y2="49"/><line x1="55" y1="7" x2="55" y2="49"/>
+    <line x1="10" y1="21" x2="70" y2="21"/><line x1="10" y1="35" x2="70" y2="35"/>
+  </g>
+  <ellipse cx="38" cy="29" rx="16" ry="12" fill="#334155" opacity="0.8"/>
+  <circle cx="44" cy="25" r="7" fill="none" stroke="#22D3EE" stroke-width="1.8" stroke-dasharray="2.5,1.5"/>
+  <circle cx="44" cy="25" r="2" fill="#22D3EE"/>
+  <rect x="13" y="10" width="18" height="9" rx="1" fill="#0284C7"/>
+  <text x="22" y="16.8" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="6.4" font-weight="900">NHS</text>
+  <text x="158" y="31" text-anchor="middle" fill="#0F766E" font-family="system-ui,sans-serif" font-size="23.5" font-weight="900">700,000</text>
+  <text x="158" y="45" text-anchor="middle" fill="#1E293B" font-family="system-ui,sans-serif" font-size="8.4" font-weight="800">WOMEN · £10M NHS AI TRIAL</text>
 </svg>"""
     if kind == "fifa":
-        return """<svg viewBox="0 0 193 52" width="100%" height="52" xmlns="http://www.w3.org/2000/svg">
-  <rect width="193" height="52" fill="#14532D"/>
-  <circle cx="96.5" cy="26" r="18" fill="none" stroke="#4ADE80" stroke-width="1" opacity="0.45"/>
-  <line x1="96.5" y1="0" x2="96.5" y2="52" stroke="#4ADE80" stroke-width="1" opacity="0.45"/>
-  <rect x="8" y="8" width="82" height="36" rx="3" fill="#0F172A" stroke="#FACC15" stroke-width="1.2"/>
-  <text x="49" y="22" text-anchor="middle" fill="#FACC15" font-family="system-ui,sans-serif" font-size="11" font-weight="900">2031</text>
-  <text x="49" y="34" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="7.4" font-weight="700">US·MX·CR·JM (48)</text>
-  <rect x="103" y="8" width="82" height="36" rx="3" fill="#1E3A8A" stroke="#FACC15" stroke-width="1.2"/>
-  <text x="144" y="22" text-anchor="middle" fill="#FACC15" font-family="system-ui,sans-serif" font-size="11" font-weight="900">2035</text>
-  <text x="144" y="34" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="7.6" font-weight="800">UNITED KINGDOM</text>
+        return """<svg viewBox="0 0 242 56" width="100%" height="56" xmlns="http://www.w3.org/2000/svg">
+  <rect width="242" height="56" fill="#14532D"/>
+  <line x1="121" y1="0" x2="121" y2="56" stroke="#4ADE80" stroke-width="1.2" opacity="0.5"/>
+  <circle cx="121" cy="28" r="14" fill="none" stroke="#4ADE80" stroke-width="1.2" opacity="0.45"/>
+  <rect x="10" y="8" width="104" height="40" rx="3" fill="#0F172A" stroke="#FACC15" stroke-width="1.2"/>
+  <text x="62" y="28" text-anchor="middle" fill="#FACC15" font-family="system-ui,sans-serif" font-size="18" font-weight="900">2031</text>
+  <text x="62" y="41" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="8.2" font-weight="800">US·MX·CR·JM (48)</text>
+  <rect x="128" y="8" width="104" height="40" rx="3" fill="#1E3A8A" stroke="#FACC15" stroke-width="1.2"/>
+  <text x="180" y="28" text-anchor="middle" fill="#FACC15" font-family="system-ui,sans-serif" font-size="18" font-weight="900">2035</text>
+  <text x="180" y="41" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="8.4" font-weight="800">UNITED KINGDOM</text>
 </svg>"""
-    if kind == "tajikistan":
-        return """<svg viewBox="0 0 193 52" width="100%" height="52" xmlns="http://www.w3.org/2000/svg">
-  <rect width="193" height="52" fill="#1E293B"/>
-  <!-- Court columns -->
-  <polygon points="14,17 62,17 38,8" fill="#CBD5E1"/>
-  <rect x="18" y="19" width="6" height="22" fill="#94A3B8"/>
-  <rect x="35" y="19" width="6" height="22" fill="#94A3B8"/>
-  <rect x="52" y="19" width="6" height="22" fill="#94A3B8"/>
-  <rect x="12" y="41" width="52" height="4" fill="#CBD5E1"/>
-  <!-- Exit arrow -->
-  <path d="M70,26 L92,26 L86,20 M92,26 L86,32" fill="none" stroke="#F87171" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="100" y="9" width="86" height="34" rx="3" fill="#B91C1C"/>
-  <text x="143" y="23" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="9.5" font-weight="900">ICC EXIT</text>
-  <text x="143" y="35" text-anchor="middle" fill="#FECACA" font-family="system-ui,sans-serif" font-size="7.4" font-weight="700">UN NOTIFIED · 2027</text>
+    if kind == "senegal":
+        return """<svg viewBox="0 0 242 56" width="100%" height="56" xmlns="http://www.w3.org/2000/svg">
+  <rect width="242" height="56" fill="#FEF3C7"/>
+  <rect y="35" width="242" height="21" fill="#0369A1"/>
+  <path d="M0,36 Q24,30 48,36 T96,36 T144,36" fill="none" stroke="#BAE6FD" stroke-width="1.8"/>
+  <!-- Capsized pirogue hull -->
+  <g transform="translate(52,35) rotate(-14)">
+    <path d="M-28,0 Q0,-12 28,0 L22,6 L-22,6 Z" fill="#92400E" stroke="#451A03" stroke-width="1.2"/>
+  </g>
+  <text x="166" y="28" text-anchor="middle" fill="#9A3412" font-family="system-ui,sans-serif" font-size="24" font-weight="900">~100</text>
+  <text x="166" y="48" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="8.4" font-weight="900">ABOARD · YENNE COAST</text>
 </svg>"""
-    if kind == "schools":
-        return """<svg viewBox="0 0 193 52" width="100%" height="52" xmlns="http://www.w3.org/2000/svg">
-  <rect width="193" height="52" fill="#E2E8F0"/>
-  <!-- School building -->
-  <polygon points="14,26 42,11 70,26" fill="#B91C1C"/>
-  <rect x="18" y="26" width="48" height="20" fill="#FFFFFF" stroke="#64748B" stroke-width="1"/>
-  <rect x="36" y="33" width="12" height="13" fill="#334155"/>
-  <!-- Envelope alert -->
-  <rect x="78" y="10" width="106" height="16" rx="2" fill="#1E293B"/>
-  <text x="131" y="21" text-anchor="middle" fill="#FDE047" font-family="system-ui,sans-serif" font-size="7.8" font-weight="800">DK + DE · MASS EMAILS</text>
-  <rect x="78" y="30" width="106" height="16" rx="2" fill="#065F46"/>
-  <text x="131" y="41" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="8.2" font-weight="900">RULED HYBRID HOAX</text>
+    # cricket
+    return """<svg viewBox="0 0 242 56" width="100%" height="56" xmlns="http://www.w3.org/2000/svg">
+  <rect width="242" height="56" fill="#E8F3E8"/>
+  <rect x="0" y="42" width="242" height="14" fill="#166534"/>
+  <!-- Stumps & ball -->
+  <rect x="24" y="13" width="4" height="30" fill="#B45309"/>
+  <rect x="33" y="13" width="4" height="30" fill="#B45309"/>
+  <rect x="42" y="13" width="4" height="30" fill="#B45309"/>
+  <rect x="23" y="11" width="24" height="3" fill="#D97706"/>
+  <circle cx="64" cy="35" r="7" fill="#DC2626" stroke="#FFFFFF" stroke-width="1.2"/>
+  <text x="160" y="32" text-anchor="middle" fill="#14532D" font-family="system-ui,sans-serif" font-size="25" font-weight="900">239-5</text>
+  <text x="160" y="52" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="8.4" font-weight="800">DAY 5 DRAW · WELLINGTON</text>
 </svg>"""
-    if kind == "cricket":
-        return """<svg viewBox="0 0 193 52" width="100%" height="52" xmlns="http://www.w3.org/2000/svg">
-  <rect width="193" height="52" fill="#166534"/>
-  <rect x="0" y="36" width="193" height="16" fill="#CA8A04" opacity="0.35"/>
-  <!-- Stumps -->
-  <rect x="20" y="14" width="3" height="28" fill="#FDE68A"/>
-  <rect x="27" y="14" width="3" height="28" fill="#FDE68A"/>
-  <rect x="34" y="14" width="3" height="28" fill="#FDE68A"/>
-  <rect x="19" y="12" width="19" height="2.5" fill="#F59E0B"/>
-  <circle cx="54" cy="34" r="6" fill="#DC2626" stroke="#FFFFFF" stroke-width="1"/>
-  <!-- Scoreboard -->
-  <rect x="72" y="7" width="113" height="38" rx="3" fill="#0F172A"/>
-  <text x="128.5" y="22" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="11.5" font-weight="900">NZ 239-5</text>
-  <text x="128.5" y="34" text-anchor="middle" fill="#4ADE80" font-family="system-ui,sans-serif" font-size="7.8" font-weight="800">DAY 5 DRAW · 120 OV</text>
-  <text x="128.5" y="42" text-anchor="middle" fill="#94A3B8" font-family="system-ui,sans-serif" font-size="6.8" font-weight="700">WELLINGTON 1ST TEST</text>
-</svg>"""
-    if kind == "indonesia":
-        return """<svg viewBox="0 0 193 52" width="100%" height="52" xmlns="http://www.w3.org/2000/svg">
-  <rect width="193" height="52" fill="#27201C"/>
-  <!-- Factory roofline -->
-  <polygon points="8,46 8,28 24,20 24,28 40,20 40,28 60,28 60,46" fill="#44403C"/>
-  <path d="M18,26 Q30,4 42,25 Q50,10 58,28 Z" fill="#EA580C"/>
-  <path d="M24,27 Q32,12 40,27 Z" fill="#FACC15"/>
-  <rect x="68" y="7" width="118" height="38" rx="3" fill="#991B1B"/>
-  <text x="127" y="24" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="13" font-weight="900">24 DEAD</text>
-  <text x="127" y="37" text-anchor="middle" fill="#FECACA" font-family="system-ui,sans-serif" font-size="7.2" font-weight="800">CIKANDE · DOZENS MISSING</text>
-</svg>"""
-    # israel
-    return """<svg viewBox="0 0 193 52" width="100%" height="52" xmlns="http://www.w3.org/2000/svg">
-  <rect width="193" height="52" fill="#EFF6FF"/>
-  <rect x="0" y="0" width="193" height="5" fill="#1D4ED8"/>
-  <rect x="0" y="47" width="193" height="5" fill="#1D4ED8"/>
-  <rect x="10" y="10" width="76" height="32" rx="3" fill="#1E3A8A"/>
-  <text x="48" y="24" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="8.6" font-weight="900">NO IRAN</text>
-  <text x="48" y="35" text-anchor="middle" fill="#93C5FD" font-family="system-ui,sans-serif" font-size="8.2" font-weight="800">STRIKE NOW</text>
-  <rect x="94" y="10" width="89" height="32" rx="3" fill="#B91C1C"/>
-  <text x="138.5" y="24" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,sans-serif" font-size="8.4" font-weight="900">LIKUD TALKS</text>
-  <text x="138.5" y="35" text-anchor="middle" fill="#FECACA" font-family="system-ui,sans-serif" font-size="8" font-weight="800">COLLAPSE</text>
-</svg>"""
+
+
+def status_tag(status: str) -> str:
+    fg, bg, bd = STATUS_STYLES[status]
+    return f'<span class="stag" style="color:{fg};background:{bg};border-color:{bd}">{esc(status)}</span>'
 
 
 def build_html(data: dict) -> str:
-    # UTC timeline items
     utc_items = "".join(
         f'<div class="utc-item"><span class="utc-t">{esc(u["time"])}</span><span class="utc-l">{esc(u["label"])}</span></div>'
         for u in data["utc_timeline"]
     )
-    # Numbers strip
-    num_items = "".join(
-        f'<div class="num-item"><div class="num-v">{esc(n["val"])}</div><div class="num-l">{esc(n["label"])}</div></div>'
-        for n in data["numbers"]
-    )
-    # Regional stacked bar
     reg_bars = "".join(
         f'<div class="reg-seg" style="flex:{r["count"]};background:{r["color"]}">{esc(r["name"])} {r["count"]}</div>'
         for r in data["region_counts"]
     )
-    # Heroes (#1-#3) — pure editorial news cards, zero rubric badges
     heroes_html = []
     for st in data["heroes"]:
         col = REGION_COLORS[st["region"]]
@@ -396,14 +352,14 @@ def build_html(data: dict) -> str:
   <div class="card-meta">
     <span class="num-dot" style="background:{col}">{st["id"]}</span>
     <span class="kicker" style="color:{col}">{esc(st["kicker"])}</span>
-    <span class="src-inline">{esc(st["source"])}</span>
+    {status_tag(st["status"])}
   </div>
   <h2 class="hero-h">{esc(st["headline"])}</h2>
   <p class="hero-d">{esc(st["summary"])}</p>
+  <div class="src-foot">{esc(st["source"])}</div>
 </article>"""
         )
 
-    # Features (#4-#13)
     def render_feat_row(items):
         out = []
         for st in items:
@@ -414,20 +370,21 @@ def build_html(data: dict) -> str:
   <div class="card-meta">
     <span class="num-dot sm" style="background:{col}">{st["id"]}</span>
     <span class="kicker sm" style="color:{col}">{esc(st["kicker"])}</span>
+    {status_tag(st["status"])}
   </div>
   <h3 class="feat-h">{esc(st["headline"])}</h3>
   <p class="feat-d">{esc(st["summary"])}</p>
-  <div class="src sm">{esc(st["source"])}</div>
+  <div class="src-foot sm">{esc(st["source"])}</div>
 </article>"""
             )
         return "".join(out)
 
-    feat_row1 = render_feat_row(data["features"][:5])
-    feat_row2 = render_feat_row(data["features"][5:])
+    feat_row1 = render_feat_row(data["features"][:4])
+    feat_row2 = render_feat_row(data["features"][4:])
 
-    # Briefs (#14-#50) split into 3 columns: 13 + 12 + 12
+    # 29 briefs split into 2 wide, ultra-readable columns: 15 left + 14 right
     briefs = data["briefs"]
-    cols = [briefs[:13], briefs[13:25], briefs[25:]]
+    cols = [briefs[:15], briefs[15:]]
     brief_cols_html = []
     for col_items in cols:
         rows = []
@@ -439,20 +396,16 @@ def build_html(data: dict) -> str:
             )
         brief_cols_html.append(f'<div class="b-col">{"".join(rows)}</div>')
 
-    # Map region legend
     reg_legend = "".join(
         f'<span class="leg-item"><i style="background:{r["color"]}"></i>{esc(r["name"])} {r["count"]}</span>'
         for r in data["region_counts"]
     )
-
-    # Markets at Close table (pure financial news data)
     mkt_rows = "".join(
         f'<div class="m-row"><span class="m-name">{esc(m["name"])}</span>'
         f'<span class="m-val">{esc(m["val"])}</span>'
         f'<span class="m-chg {"up" if m["up"] else "dn"}">{esc(m["chg"])}</span></div>'
         for m in data["markets_close"]
     )
-
     world_svg = render_world_map(data)
 
     return f"""<!DOCTYPE html>
@@ -469,8 +422,8 @@ html, body {{
 }}
 .page {{
   width: 1024px; height: 1024px;
-  padding: 8px 12px 7px 12px;
-  display: flex; flex-direction: column; gap: 5px;
+  padding: 7px 12px 6px 12px;
+  display: flex; flex-direction: column; gap: 4.5px;
 }}
 .eyebrow {{
   display: flex; justify-content: space-between; align-items: center;
@@ -480,7 +433,7 @@ html, body {{
 .eyebrow .left {{ color: #A61C1C; }}
 .eyebrow .right {{ color: #334155; }}
 .masthead {{
-  text-align: center; padding: 1px 0 4px 0;
+  text-align: center; padding: 0 0 3px 0;
   border-bottom: 2px solid #161614;
 }}
 .masthead h1 {{
@@ -491,15 +444,15 @@ html, body {{
 .masthead .sub {{
   font-family: Georgia, "Times New Roman", serif;
   font-style: italic; font-size: 11px; color: #3F3D36;
-  margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }}
 .utc-bar {{
   display: flex; align-items: stretch; gap: 6px;
   background: #F1ECE0; border: 1px solid #D5CEBE; border-radius: 2px;
-  padding: 2.5px 6px 2.5px 0;
+  padding: 2px 6px 2px 0;
 }}
 .utc-tag {{
-  background: #A61C1C; color: #FFF; font-size: 7.5px; font-weight: 900;
+  background: #A61C1C; color: #FFF; font-size: 7.4px; font-weight: 900;
   padding: 2px 6px; display: flex; align-items: center; text-align: center;
   line-height: 1.05; letter-spacing: 0.3px; flex-shrink: 0;
 }}
@@ -512,21 +465,7 @@ html, body {{
 }}
 .utc-item:first-child {{ border-left: none; padding-left: 0; }}
 .utc-t {{ font-size: 8.6px; font-weight: 900; color: #A61C1C; line-height: 1.05; }}
-.utc-l {{ font-size: 7.3px; font-weight: 600; color: #262522; line-height: 1.08; }}
-.nums-row {{
-  display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px;
-  padding: 1px 0 2px 0;
-}}
-.num-item {{
-  display: flex; align-items: baseline; gap: 5px;
-  border-left: 1px solid #DDD6C7; padding-left: 6px;
-}}
-.num-item:first-child {{ border-left: none; padding-left: 2px; }}
-.num-v {{
-  font-family: Georgia, serif; font-size: 15.5px; font-weight: 900;
-  color: #A61C1C; line-height: 1; white-space: nowrap;
-}}
-.num-l {{ font-size: 7.4px; color: #3B3934; line-height: 1.12; font-weight: 600; }}
+.utc-l {{ font-size: 7.2px; font-weight: 600; color: #262522; line-height: 1.08; }}
 .reg-bar {{
   display: flex; height: 14px; border-radius: 2px; overflow: hidden; gap: 1px;
 }}
@@ -540,126 +479,140 @@ html, body {{
 }}
 .hero-card {{
   display: flex; flex-direction: column; gap: 3px;
-  border-bottom: 1.5px solid #161614; padding-bottom: 5px;
+  border-bottom: 1.5px solid #161614; padding-bottom: 4px;
 }}
 .hero-art {{
-  width: 100%; height: 92px; border: 1px solid #CFC8B8; border-radius: 2px; overflow: hidden;
+  width: 100%; height: 88px; border: 1px solid #CFC8B8; border-radius: 2px; overflow: hidden;
 }}
-.hero-art svg {{ height: 92px; }}
+.hero-art svg {{ height: 88px; }}
 .card-meta {{
   display: flex; align-items: center; gap: 4px; margin-top: 1px;
 }}
 .num-dot {{
   display: inline-flex; align-items: center; justify-content: center;
-  width: 14.5px; height: 14.5px; border-radius: 50%;
-  color: #FFF; font-size: 8.6px; font-weight: 900; flex-shrink: 0;
+  width: 15px; height: 15px; border-radius: 50%;
+  color: #FFF; font-size: 8.8px; font-weight: 900; flex-shrink: 0;
 }}
-.num-dot.sm {{ width: 13px; height: 13px; font-size: 7.6px; }}
+.num-dot.sm {{ width: 13.5px; height: 13.5px; font-size: 7.8px; }}
 .kicker {{
-  font-size: 7.8px; font-weight: 800; letter-spacing: 0.25px;
+  font-size: 7.9px; font-weight: 800; letter-spacing: 0.25px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
 }}
-.kicker.sm {{ font-size: 7.1px; }}
-.src-inline {{
-  font-size: 7.1px; font-weight: 700; color: #646158; white-space: nowrap;
+.kicker.sm {{ font-size: 7.3px; }}
+.stag {{
+  font-size: 6.1px; font-weight: 800; padding: 0.5px 3.5px;
+  border: 0.75px solid; border-radius: 2px; letter-spacing: 0.25px; flex-shrink: 0;
 }}
+.src-foot {{
+  font-size: 7px; font-weight: 700; color: #646158; margin-top: auto;
+}}
+.src-foot.sm {{ font-size: 6.6px; }}
 .hero-h {{
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 14.8px; font-weight: 800; line-height: 1.12; color: #111110;
+  font-size: 14.6px; font-weight: 800; line-height: 1.12; color: #111110;
 }}
 .hero-d {{
-  font-size: 9px; line-height: 1.25; color: #2D2C28;
-}}
-.src.sm {{
-  font-size: 6.8px; font-weight: 700; color: #646158; margin-top: auto;
+  font-size: 8.9px; line-height: 1.24; color: #2D2C28;
 }}
 .feats {{
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px;
 }}
 .feat-card {{
   display: flex; flex-direction: column; gap: 2.5px;
-  border-bottom: 1px solid #D5CEBE; padding-bottom: 4px;
+  border-bottom: 1px solid #D5CEBE; padding-bottom: 3.5px;
 }}
 .feat-art {{
-  width: 100%; height: 55px; border: 1px solid #CFC8B8; border-radius: 2px; overflow: hidden;
+  width: 100%; height: 52px; border: 1px solid #CFC8B8; border-radius: 2px; overflow: hidden;
 }}
-.feat-art svg {{ height: 55px; }}
+.feat-art svg {{ height: 52px; }}
 .feat-h {{
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 11.2px; font-weight: 800; line-height: 1.12; color: #111110;
+  font-size: 11.7px; font-weight: 800; line-height: 1.12; color: #111110;
 }}
 .feat-d {{
-  font-size: 8px; line-height: 1.21; color: #31302B;
+  font-size: 8.1px; line-height: 1.22; color: #31302B;
 }}
 .bottom-grid {{
-  display: grid; grid-template-columns: 248px 1fr; gap: 10px;
+  display: grid; grid-template-columns: 248px 1fr; gap: 11px;
   flex: 1; min-height: 0;
-  border-top: 1.5px solid #161614; padding-top: 5px;
+  border-top: 1.5px solid #161614; padding-top: 4px;
 }}
 .map-panel {{
-  display: flex; flex-direction: column; gap: 5px;
+  display: flex; flex-direction: column; gap: 4px;
 }}
 .sec-h {{
-  font-size: 8.6px; font-weight: 900; letter-spacing: 0.4px;
+  font-size: 8.5px; font-weight: 900; letter-spacing: 0.4px;
   color: #A61C1C; text-transform: uppercase;
   display: flex; justify-content: space-between; align-items: baseline;
 }}
 .sec-h span {{ font-size: 7.2px; font-weight: 600; color: #57534A; text-transform: none; letter-spacing: 0; }}
 .map-box {{
-  width: 248px; height: 166px; border: 1px solid #C6BFAE; border-radius: 3px; overflow: hidden;
+  width: 248px; height: 160px; border: 1px solid #C6BFAE; border-radius: 3px; overflow: hidden;
 }}
 .reg-leg {{
   display: flex; flex-wrap: wrap; gap: 3px 8px;
-  font-size: 7.5px; font-weight: 700; color: #2D2C28;
-  padding: 1px 0;
+  font-size: 7.4px; font-weight: 700; color: #2D2C28;
 }}
 .leg-item {{ display: inline-flex; align-items: center; gap: 3px; }}
 .leg-item i {{ width: 7.5px; height: 7.5px; border-radius: 50%; display: inline-block; }}
 .mkt-box {{
   background: #F2EDE1; border: 1px solid #D5CEBE; border-radius: 2px;
-  padding: 5px 7px; margin-top: auto;
+  padding: 5px 8px; margin-top: auto;
   display: flex; flex-direction: column; gap: 2.5px;
 }}
 .mkt-h {{
   font-size: 7.6px; font-weight: 900; color: #161614; letter-spacing: 0.35px;
-  border-bottom: 1px solid #CFC8B8; padding-bottom: 2px; margin-bottom: 1px;
+  border-bottom: 1px solid #CFC8B8; padding-bottom: 2px; margin-bottom: 1.5px;
 }}
 .m-row {{
   display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: baseline;
-  font-size: 7.5px; line-height: 1.22;
+  font-size: 7.6px; line-height: 1.24;
 }}
 .m-name {{ font-weight: 700; color: #1F1E1B; }}
-.m-val {{ color: #57534A; font-weight: 600; font-size: 7.1px; }}
-.m-chg {{ font-weight: 800; min-width: 40px; text-align: right; }}
+.m-val {{ color: #57534A; font-weight: 600; font-size: 7.2px; }}
+.m-chg {{ font-weight: 800; min-width: 41px; text-align: right; }}
 .m-chg.up {{ color: #047857; }}
 .m-chg.dn {{ color: #B91C1C; }}
 .briefs-panel {{
-  display: flex; flex-direction: column; gap: 4px; min-height: 0;
+  display: flex; flex-direction: column; gap: 3px; min-height: 0;
 }}
 .b-cols {{
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
   flex: 1; min-height: 0;
 }}
 .b-col {{
   display: flex; flex-direction: column; justify-content: space-between;
-  border-left: 1px solid #E2DCCD; padding-left: 6px;
+  border-left: 1px solid #E2DCCD; padding-left: 8px;
 }}
 .b-col:first-child {{ border-left: none; padding-left: 0; }}
 .b-row {{
-  display: flex; align-items: flex-start; gap: 4px;
-  font-size: 8.15px; line-height: 1.2; color: #1F1E1B;
+  display: flex; align-items: flex-start; gap: 4.5px;
+  font-size: 7.95px; line-height: 1.15; color: #1F1E1B;
 }}
 .b-num {{
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 13.5px; height: 13.5px; border-radius: 50%;
-  color: #FFF; font-size: 6.9px; font-weight: 800; margin-top: 0.5px; flex-shrink: 0;
+  min-width: 14px; height: 14px; border-radius: 50%;
+  color: #FFF; font-size: 7px; font-weight: 800; margin-top: 0.5px; flex-shrink: 0;
 }}
 .b-txt b {{ color: #111110; }}
 .b-src {{ color: #6B665B; font-size: 7px; font-weight: 600; }}
+.date-check {{
+  display: flex; align-items: stretch; gap: 7px;
+  border: 1.2px solid #A61C1C; background: #FDF7F6; border-radius: 2px;
+  padding: 3px 7px 3px 0;
+}}
+.dc-tag {{
+  background: #A61C1C; color: #FFF; font-size: 7.4px; font-weight: 900;
+  padding: 2px 7px; display: flex; align-items: center; text-align: center;
+  line-height: 1.1; flex-shrink: 0;
+}}
+.dc-body {{
+  font-size: 7.1px; line-height: 1.22; color: #262320;
+}}
 .footer {{
   display: flex; justify-content: space-between; align-items: center;
-  font-size: 7.2px; color: #57534A; font-weight: 600;
-  border-top: 1px solid #D5CEBE; padding-top: 2.5px;
+  font-size: 7px; color: #57534A; font-weight: 600;
+  border-top: 1px solid #D5CEBE; padding-top: 2px;
 }}
 </style>
 </head>
@@ -677,14 +630,13 @@ html, body {{
     <div class="utc-tag">THE DAY<br>IN UTC</div>
     <div class="utc-items">{utc_items}</div>
   </section>
-  <section class="nums-row">{num_items}</section>
   <section class="reg-bar">{reg_bars}</section>
   <section class="heroes">{"".join(heroes_html)}</section>
   <section class="feats">{feat_row1}</section>
   <section class="feats">{feat_row2}</section>
   <section class="bottom-grid">
     <div class="map-panel">
-      <div class="sec-h">WHERE IT HAPPENED <span>pins #1–13 · dots #14–50</span></div>
+      <div class="sec-h">WHERE IT HAPPENED <span>pins #1–11 · dots #12–40</span></div>
       <div class="map-box">{world_svg}</div>
       <div class="reg-leg">{reg_legend}</div>
       <div class="mkt-box">
@@ -693,13 +645,17 @@ html, body {{
       </div>
     </div>
     <div class="briefs-panel">
-      <div class="sec-h">ALSO ON MONDAY 23 NOVEMBER <span>37 more stories</span></div>
+      <div class="sec-h">ALSO ON MONDAY 23 NOVEMBER <span>29 more stories</span></div>
       <div class="b-cols">{"".join(brief_cols_html)}</div>
     </div>
   </section>
+  <section class="date-check">
+    <div class="dc-tag">DATE<br>CHECK</div>
+    <div class="dc-body">{esc(data["date_check_text"])}</div>
+  </section>
   <footer class="footer">
-    <span>Monday 23 November 2026 · World Edition</span>
-    <span>Sources: Reuters, AP, BBC, Al Jazeera, Guardian, WFP, WHO, FIFA, S&amp;P Global</span>
+    <span>Monday 23 November 2026 · Claims attributed. {status_tag("OFFICIAL")} agency/court/result · {status_tag("CONFIRMED")} 2+ outlets · {status_tag("REPORTED")} 1 outlet</span>
+    <span>Sources: Reuters, AP, BBC, Al Jazeera, Guardian, NASA, NHS, FIFA, WFP</span>
   </footer>
 </div>
 </body>
@@ -711,8 +667,8 @@ def main() -> None:
     with open(STORIES_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
     total = len(data["heroes"]) + len(data["features"]) + len(data["briefs"])
-    if total != 50:
-        raise ValueError(f"Expected 50 stories, got {total}")
+    if total != 40:
+        raise ValueError(f"Expected 40 stories, got {total}")
 
     doc = build_html(data)
     with open(TMP_HTML, "w", encoding="utf-8") as f:
